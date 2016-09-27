@@ -1,0 +1,12 @@
+{
+    "name": "bgrimes/nca-ica",
+    "authors": [
+        {
+            "name": "Ben Grimes",
+            "email": "bgrimes@gmail.com"
+        }
+    ],
+    "require": {
+        "symfony/console": "^3.1"
+    }
+}
