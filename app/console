@@ -6,11 +6,15 @@ set_time_limit(0);
 
 // Commands
 require_once __DIR__.'/commands/IcaHarvestCommand.php';
+require_once __DIR__.'/commands/NcaHarvestCommand.php';
+require_once __DIR__.'/commands/GuzzleNcaHarvestCommand.php';
 
 // Utils
 //require_once __DIR__.'/utils/VoteSmart.php';
 
-use \Comm\Harvest\Command\IcaHarvestCommand;
+use \Cis\Command\IcaHarvestCommand;
+use \Cis\Command\NcaHarvestCommand;
+use \Cis\Command\GuzzleNcaHarvestCommand;
 //use Comm\VoteSmart\Command\GrabFromVotesmartCommand;
 //use Comm\VoteSmart\Command\CompileVotesmartChunksCommand;
 //use Comm\Misc\Command\ExportTwitterCommand;
@@ -21,5 +25,7 @@ use Symfony\Component\Console\Application;
 
 $application = new Application("UKCOMM NCA/ICA Harvester");
 $application->add(new IcaHarvestCommand);
+$application->add(new NcaHarvestCommand);
+$application->add(new GuzzleNcaHarvestCommand());
 
 $application->run();
