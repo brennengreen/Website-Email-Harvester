@@ -55,6 +55,7 @@ class IcaHarvestCommand extends Command
         $this->login($driver, $username, $password);
 
         $results = $redisClient->get('cache:ica:step1:results');
+        echo 'Results: ', $results, "\n";
         $results = \GuzzleHttp\json_decode($results, true);
 
         $numProcessed = 0;
@@ -63,25 +64,24 @@ class IcaHarvestCommand extends Command
             $this->parseMemberInfo($driver, $id, $results);
             $remaining = count($results) + 1;
             $numProcessed += 1;
-            $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
+           $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
         }
 
         // ----- STEP 1
 //
-//        $nextPageElem = null;
-//        $results = [];
-//        $page = 1;
-//        do {
-//            $this->goToSearchPage($driver, $nextPageElem);
-//            $results = array_merge($results, $this->getResultsFromSearchPage($driver));
-//            $nextPageElem = $this->getNextPageOfSearch($driver);
-//
-//            $redisClient->set('cache:ica:step1:page', $page);
-//            $redisClient->set('cache:ica:step1:results', \GuzzleHttp\json_encode($results));
-//            $output->writeln('<info>Cached page </info>' . $page);
-//
-//            $page = $page + 1;
-//        } while ($nextPageElem !== null);
+        /*$nextPageElem = null;
+        $results = [];
+        $page = 1;
+        do {$this->goToSearchPage($driver, $nextPageElem);
+            $results = array_merge($results, $this->getResultsFromSearchPage($driver));
+            $nextPageElem = $this->getNextPageOfSearch($driver);
+
+            $redisClient->set('cache:ica:step1:page', $page);
+            $redisClient->set('cache:ica:step1:results', \GuzzleHttp\json_encode($results));
+            $output->writeln('<info>Cached page </info>' . $page);
+
+            $page = $page + 1;
+        } while ($nextPageElem !== null);*/
 
         $output->writeln('<info>Done</info>');
 //        sleep(10);
@@ -151,7 +151,7 @@ class IcaHarvestCommand extends Command
             /** @var RemoteWebElement $element */
             $name = $element->getText();
             $href = $element->getAttribute('href');
-            preg_match('/http:\/\/www.icahdq.org\/members\/\?id=(.*)/', $href, $match);
+            preg_match('/https:\/\/www.icahdq.org\/members\/\?id=(.*)/', $href, $match);
             $memberId = $match[1];
             $results []= [
                 'id' => $memberId,
@@ -219,7 +219,7 @@ class IcaHarvestCommand extends Command
 
     protected function getDriver() {
         $seleniumHost = "http://127.0.0.1:4444/wd/hub";
-        return RemoteWebDriver::create($seleniumHost, DesiredCapabilities::firefox());
+        return RemoteWebDriver::create($seleniumHost, DesiredCapabilities::chrome());
     }
 
     protected function login(RemoteWebDriver $driver, $username, $password)
@@ -241,9 +241,9 @@ class IcaHarvestCommand extends Command
     {
         $driver->get($this->icaUrl);
 
-        $driver->findElement(WebDriverBy::cssSelector("input[name=USER_ID]"))->sendKeys($username);
-        $driver->findElement(WebDriverBy::cssSelector("input[name=USER_Password]"))->sendKeys($password);
-        $driver->findElement(WebDriverBy::cssSelector("input[value=Login]"))->click();
+        $driver->findElement(WebDriverBy::cssSelector("input[name=u]"))->sendKeys($username);
+        $driver->findElement(WebDriverBy::cssSelector("input[name=p]"))->sendKeys($password);
+        $driver->findElement(WebDriverBy::cssSelector("input[name=btn_submitLogin]"))->click();
 
         $driver->wait(30, 500)->until(
             WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("span.loggedIn"))

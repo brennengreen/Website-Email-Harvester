@@ -8,7 +8,7 @@
     ],
     "require": {
         "symfony/console": "^3.1",
-        "facebook/webdriver": "^1.1",
+        "facebook/webdriver": "^1.7",
         "guzzlehttp/guzzle": "^6.3",
         "symfony/dom-crawler": "^3.3",
         "symfony/css-selector": "^3.3",
