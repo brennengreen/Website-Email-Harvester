@@ -2,6 +2,7 @@
 
 namespace Cis\Command;
 
+use Facebook\WebDriver\Exception\NoSuchElementException;
 use Predis\Client;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -55,7 +56,6 @@ class IcaHarvestCommand extends Command
         $this->login($driver, $username, $password);
 
         $results = $redisClient->get('cache:ica:step1:results');
-        echo 'Results: ', $results, "\n";
         $results = \GuzzleHttp\json_decode($results, true);
 
         $numProcessed = 0;
@@ -68,7 +68,7 @@ class IcaHarvestCommand extends Command
         }
 
         // ----- STEP 1
-//
+
         /*$nextPageElem = null;
         $results = [];
         $page = 1;
@@ -85,7 +85,7 @@ class IcaHarvestCommand extends Command
 
         $output->writeln('<info>Done</info>');
 //        sleep(10);
-//
+
         $driver->close();
     }
 
@@ -94,26 +94,74 @@ class IcaHarvestCommand extends Command
         $res = array_merge($res, [count($res) + 1]);
     }
 
+    protected function scrapeMemberInfo(RemoteWebDriver $driver, $id) {
+        $memberInfo = array(
+            "name" => "",
+            "email" => "",
+            "employer-name" => "",
+            "location" => "",
+            "keywords" => array(),
+            "birthday" => "",
+            "gender" => "",
+            "region" => "",
+            "degreeOne" => "",
+            "degreeTwo" => ""
+        );
+
+        try {
+            $memberInfo["name"] = $driver->findElement(WebDriverBy::className("big"))->getText();
+        } catch (\Exception $exception) {
+            $memberInfo["name"] = "N/A";
+        }
+
+        try {
+            $memberInfo["email"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[1]/tbody/tr/td/a"))->getText();
+        } catch (\Exception $exception) {
+            $memberInfo["email"] = "N/A";
+        }
+
+        try {
+            $memberInfo["employer-name"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"tdEmployerName\"]/a[1]"))->getText();
+        } catch (\Exception $exception) {
+            $memberInfo["employer-name"] = "N/A";
+        }
+
+        try {
+            $country = $driver->findElement(WebDriverBy::xpath("//*[@id=\"tdEmployerName\"]/a[3]"))->getText();
+            $province = $driver->findElement(WebDriverBy::xpath("//*[@id=\"tdEmployerName\"]/a[2]"))->getText();
+            $memberInfo["location"] = $country . " " . $province;
+        } catch (\Exception $exception) {
+            $memberInfo["location"] = "N/A";
+        }
+
+        try {
+            $memberInfo["keywords"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[2]/tbody/tr[4]/td[2]"))->getText();
+
+        } catch (\Exception $exception) {
+            $memberInfo["keywords"] = "N/A";
+        }
+
+        return $memberInfo;
+    }
+
     protected function parseMemberInfo(RemoteWebDriver $driver, $id, &$members)
     {
         $redisCli = $this->getRedisClient();
-        // Check if we already have member info
-
-        // If not then get the member details
-
         // Go to member page
         $this->goToMemberPage($driver, $id);
         // Get member details
 
-        // '#tdLeftColumn + td + td
+        $memberInfo = $this->scrapeMemberInfo($driver, $id);
 
+        echo "\n------------\n" . "Data Scraped For: " . $memberInfo["name"] . "\n" . "Email Address: " .  $memberInfo["email"] . "\n";
+        echo "Location: " . $memberInfo["location"] . "\n" . "Keywords: " . $memberInfo["keywords"] . "\n---------------\n";
 
-        // Get list of associates, compare to list of existing members we know of (add to list if not found)
+        /* Get list of associates, compare to list of existing members we know of (add to list if not found)
         $assocs = $this->getMemberAssociates($driver, $id);
         foreach ($assocs as $assoc) {
             $id   = $assoc['id'];
             $name = $assoc['name'];
-        }
+        }*/
     }
 
     protected function getMemberInfoFromPage(RemoteWebDriver $driver)
@@ -132,7 +180,7 @@ class IcaHarvestCommand extends Command
     protected function goToMemberPage(RemoteWebDriver $driver, $id)
     {
         // /members/default.asp?id=
-        $driver->get($this->icaUrl . "/members/default.asp?id=" . $id);
+        $driver->get($this->icaUrl . "/members/?view=0&id=" . $id . "&pubview=");
     }
 
     protected function goToMemberAssociatePage(RemoteWebDriver $driver, $id)
