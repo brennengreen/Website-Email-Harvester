@@ -45,3 +45,7 @@ Available commands:
 You can also inspect each commands help section for further info, ie: `$ ./app/console harvest:ica --help`
 
 > To run any of these commands you will need to be running a selenium server (see prereqs above). If you installed with homebrew you just have run `$ selenium-server-standalone`. If you downloaded the jar file you just have cd to the directory and run `$ java -jar selenium-server-standalone.jar`. Either way you should see a few lines of init text and see that it has started a selenium session at localhost port 4444.
+
+## ICA How-To Guide
+
+TODO: RIGHT HOW TO GUIDE FOR ICA

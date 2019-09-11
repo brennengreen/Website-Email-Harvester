@@ -1,5 +1,13 @@
 <?php
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                    READ HOW TO GUIDE (INSIDE README) FIRST                                       ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 namespace Cis\Command;
 
 use Facebook\WebDriver\Exception\NoSuchElementException;
@@ -58,19 +66,7 @@ class IcaHarvestCommand extends Command
         $results = $redisClient->get('cache:ica:step1:results');
         $results = \GuzzleHttp\json_decode($results, true);
 
-        $numProcessed = 0;
-        $member_results = [];
-        while ($result = array_shift($results)) {
-            $id = $result['id'];
-            $member_results[] = $this->parseMemberInfo($driver, $id, $results);
-            $redisClient -> set("cache:ica:members", \GuzzleHttp\json_encode($member_results));
-            $remaining = count($results) + 1;
-            $numProcessed += 1;
-           $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
-        }
-
-        // ----- STEP 1
-
+        // ----- STEP 1 ----------------------
         /*$nextPageElem = null;
         $results = [];
         $page = 1;
@@ -84,9 +80,21 @@ class IcaHarvestCommand extends Command
 
             $page = $page + 1;
         } while ($nextPageElem !== null);*/
+        // ---------------------------------
 
+        // ----- STEP 2 ----------------------
+        $numProcessed = 0;
+        $member_results = [];
+        while ($result = array_shift($results)) {
+            $id = $result['id'];
+            $member_results[] = $this->parseMemberInfo($driver, $id, $results);
+            $redisClient -> set("cache:ica:members", \GuzzleHttp\json_encode($member_results));
+            $remaining = count($results) + 1;
+            $numProcessed += 1;
+            $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
+        }
+        // ---------------------------
         $output->writeln('<info>Done</info>');
-//        sleep(10);
 
         $driver->close();
     }
@@ -336,63 +344,3 @@ class IcaHarvestCommand extends Command
     }
 
     /** ------------------------------------------------------------------------------------------------------------ */
-
-    protected function login2(RemoteWebDriver $driver, $username, $password)
-    {
-        $driver->get($this->icaUrl);
-
-        $driver->findElement(WebDriverBy::cssSelector("input[name=u]"))->sendKeys($username);
-        $driver->findElement(WebDriverBy::cssSelector("input[name=p]"))->sendKeys($password);
-        $driver->findElement(WebDriverBy::cssSelector("input[name=btn_submitLogin]"))->click();
-
-        $driver->wait(30, 500)->until(
-            WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("span.loggedIn"))
-        );
-    }
-
-    protected function execute2(InputInterface $input, OutputInterface $output)
-    {
-        $output->writeln("<info>Starting...</info>");
-
-        $username = $input->getArgument('username');
-        $password = $input->getArgument('password');
-
-        $startPage = $input->getOption('startPage');
-
-
-        $driver = $this->getDriver();
-
-        $this->login($driver, $username, $password);
-
-        $nextPageUrl = $this->directoryBaseUrl . "/ohana/directory/index.cfm?templatemode=user&q=*&c=full_name&gpg=$startPage&grc=100";
-
-        $output->writeln('Name, Email, Company, Title, Address');
-
-        while($nextPageUrl) {
-            $driver->get($nextPageUrl);
-
-            $results = $driver->findElements(WebDriverBy::cssSelector("ul.gridResults li.result"));
-            foreach($results as $result) {
-                /** @var RemoteWebElement $result */
-                $name    = $this->getElementText($result, "div.colRight h2");
-                $company = $this->getElementText($result, "li.company");
-                $title   = $this->getElementText($result, "li.title");
-                $email   = $this->getElementText($result, "li.email a");
-                $address = $this->getElementText($result, "li.ad1_full_address");
-
-                $output->writeln(sprintf("%s,%s,%s,\"%s\",\"%s\"", $name, $email, $company, $title, $address));
-            }
-            try {
-                $nextPageUrl = trim($driver->findElement(WebDriverBy::cssSelector("a[title=\"Next Page\"]"))->getAttribute('href'));
-            } catch (\Exception $e) {
-                $nextPageUrl = null;
-            }
-            sleep(rand(4, 9));
-        }
-
-        sleep(10);
-
-        $driver->close();
-    }
-
-}
