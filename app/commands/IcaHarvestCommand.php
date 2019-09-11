@@ -59,9 +59,11 @@ class IcaHarvestCommand extends Command
         $results = \GuzzleHttp\json_decode($results, true);
 
         $numProcessed = 0;
+        $member_results = [];
         while ($result = array_shift($results)) {
             $id = $result['id'];
-            $this->parseMemberInfo($driver, $id, $results);
+            $member_results[] = $this->parseMemberInfo($driver, $id, $results);
+            $redisClient -> set("cache:ica:members", \GuzzleHttp\json_encode($member_results));
             $remaining = count($results) + 1;
             $numProcessed += 1;
            $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
@@ -96,13 +98,17 @@ class IcaHarvestCommand extends Command
 
     protected function scrapeMemberInfo(RemoteWebDriver $driver, $id) {
         $memberInfo = array(
+            // TODO
+            // Title
+            // Divisions
+            "divisions" => array(),
             "name" => "",
             "email" => "",
             "employer-name" => "",
             "location" => "",
             "keywords" => array(),
-            "birthday" => "",
             "gender" => "",
+            "phoneNum" => "",
             "region" => "",
             "degreeOne" => "",
             "degreeTwo" => ""
@@ -141,7 +147,54 @@ class IcaHarvestCommand extends Command
             $memberInfo["keywords"] = "N/A";
         }
 
+        try {
+            $memberInfo["gender"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[2]/tbody/tr[10]/td[2]/a"))->getText();
+        } catch (\Exception $exception) {
+            $memberInfo["gender"] = "N/A";
+        }
+
+        try {
+            $memberInfo["phoneNum"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"tdHomePhone\"]"))->getText();
+            if (strpos($memberInfo["phoneNum"], "Visit My Website »") || $memberInfo["phoneNum"] == "Visit My Website »") {
+                $memberInfo["phoneNum"] = str_replace("Visit My Website »", "", $memberInfo["phoneNum"]);
+            }
+        } catch (\Exception $exception) {
+            $memberInfo["phoneNum"] = "N/A";
+        }
+
+        try {
+            $memberInfo["gender"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[2]/tbody/tr[10]/td[2]/a"))->getText();
+        } catch (\Exception $exception) {
+            $memberInfo["gender"] = "N/A";
+        }
+
+        try {
+            $divisions = $driver->findElements(WebDriverBy::xpath("//*[@id=\"tdGroupsInfo\"]/div/a"));
+            $memberInfo["divisions"] = $this->scrapeDivisions($divisions);
+        } catch (\Exception $exception) {
+            $memberInfo["divisions"] = "N/A";
+        }
+
+        try {
+            $find = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[3]/tbody/tr[3]/td/label"))->getText();
+            if ($find == "Title:") {
+                $memberInfo["title"] = $driver->findElement(WebDriverBy::xpath("//*[@id=\"SpContent_Container\"]/table/tbody/tr[2]/td[3]/table[3]/tbody/tr[3]/td/span/a"))->getText();
+            }
+        } catch (\Exception $exception) {
+            $memberInfo["title"] = "N/A";
+        }
+
         return $memberInfo;
+    }
+
+    protected function scrapeDivisions($elements) {
+        $divisions = array();
+
+        foreach ($elements as $ele) {
+            $divisions[] = $ele->getText();
+        }
+
+        return $divisions;
     }
 
     protected function parseMemberInfo(RemoteWebDriver $driver, $id, &$members)
@@ -153,9 +206,8 @@ class IcaHarvestCommand extends Command
 
         $memberInfo = $this->scrapeMemberInfo($driver, $id);
 
-        echo "\n------------\n" . "Data Scraped For: " . $memberInfo["name"] . "\n" . "Email Address: " .  $memberInfo["email"] . "\n";
-        echo "Location: " . $memberInfo["location"] . "\n" . "Keywords: " . $memberInfo["keywords"] . "\n---------------\n";
 
+        return $memberInfo;
         /* Get list of associates, compare to list of existing members we know of (add to list if not found)
         $assocs = $this->getMemberAssociates($driver, $id);
         foreach ($assocs as $assoc) {
