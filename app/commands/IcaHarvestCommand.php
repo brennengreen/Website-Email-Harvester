@@ -35,8 +35,7 @@ class IcaHarvestCommand extends Command
             ->setName('harvest:ica')
             ->setDescription('Harvest ica data')
             ->addArgument('username', InputArgument::REQUIRED, 'ICA Username')
-            ->addArgument('password', InputArgument::REQUIRED, 'ICA Password')
-//            ->addOption('startPage', 'p', InputOption::VALUE_OPTIONAL, 'Page to start on', 1)
+            ->addArgument('password', InputArgument::REQUIRED, 'ICA Password')//            ->addOption('startPage', 'p', InputOption::VALUE_OPTIONAL, 'Page to start on', 1)
         ;
     }
 
@@ -53,7 +52,6 @@ class IcaHarvestCommand extends Command
         $redisClient = $this->getRedisClient();
         $output->writeln("<info>Starting...</info>");
         $this->output = $output;
-
 
 
         $username = $input->getArgument('username');
@@ -88,10 +86,10 @@ class IcaHarvestCommand extends Command
         while ($result = array_shift($results)) {
             $id = $result['id'];
             $member_results[] = $this->parseMemberInfo($driver, $id, $results);
-            $redisClient -> set("cache:ica:members", \GuzzleHttp\json_encode($member_results));
+            $redisClient->set("cache:ica:members", \GuzzleHttp\json_encode($member_results));
             $remaining = count($results) + 1;
             $numProcessed += 1;
-            $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' .  $remaining. ' left)');
+            $output->writeln('<comment>[*]</comment> Processing member <info>' . $id . '</info> (' . $numProcessed . ' processed, ' . $remaining . ' left)');
         }
         // ---------------------------
         $output->writeln('<info>Done</info>');
@@ -104,7 +102,8 @@ class IcaHarvestCommand extends Command
         $res = array_merge($res, [count($res) + 1]);
     }
 
-    protected function scrapeMemberInfo(RemoteWebDriver $driver, $id) {
+    protected function scrapeMemberInfo(RemoteWebDriver $driver, $id)
+    {
         $memberInfo = array(
             // TODO
             // Title
@@ -195,7 +194,8 @@ class IcaHarvestCommand extends Command
         return $memberInfo;
     }
 
-    protected function scrapeDivisions($elements) {
+    protected function scrapeDivisions($elements)
+    {
         $divisions = array();
 
         foreach ($elements as $ele) {
@@ -245,7 +245,7 @@ class IcaHarvestCommand extends Command
 
     protected function goToMemberAssociatePage(RemoteWebDriver $driver, $id)
     {
-        $driver->get($this->icaUrl. "/members/people.asp?list=my_associates&id=" . $id);
+        $driver->get($this->icaUrl . "/members/people.asp?list=my_associates&id=" . $id);
     }
 
     protected function getResultsFromSearchPage(RemoteWebDriver $driver)
@@ -255,13 +255,13 @@ class IcaHarvestCommand extends Command
         // Parse the table!
         $elements = $driver->findElements(WebDriverBy::cssSelector("table#SearchResultsGrid a[id^=MiniProfileLink]"));
 
-        foreach($elements as $element) {
+        foreach ($elements as $element) {
             /** @var RemoteWebElement $element */
             $name = $element->getText();
             $href = $element->getAttribute('href');
             preg_match('/https:\/\/www.icahdq.org\/members\/\?id=(.*)/', $href, $match);
             $memberId = $match[1];
-            $results []= [
+            $results [] = [
                 'id' => $memberId,
                 'name' => $name
             ];
@@ -325,7 +325,8 @@ class IcaHarvestCommand extends Command
         return trim($result[0]->getText());
     }
 
-    protected function getDriver() {
+    protected function getDriver()
+    {
         $seleniumHost = "http://127.0.0.1:4444/wd/hub";
         return RemoteWebDriver::create($seleniumHost, DesiredCapabilities::chrome());
     }
@@ -342,5 +343,6 @@ class IcaHarvestCommand extends Command
             WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("a[href='/Logout.aspx']"))
         );
     }
+}
 
     /** ------------------------------------------------------------------------------------------------------------ */
