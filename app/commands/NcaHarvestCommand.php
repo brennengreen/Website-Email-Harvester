@@ -114,13 +114,15 @@ class NcaHarvestCommand extends Command
 
     protected function getMemberDataForGroup(RemoteWebDriver $driver, $group, $memberData)
     {
+        // Wait until the search button has appeared to start crawling 
         $driver->wait(10, 500)->until(
           WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::xpath("//*[@id=\"main_content_ctl07_ctlQuery_btnSearch\"]"))
         );
 
         // Select the check box for the current member group
         $driver->findElement(WebDriverBy::cssSelector("#main_content_ctl07_ctlQuery_lst68d08db15f2145d588aec65f6a092330_pnlMultiSelect > ul > li:nth-child(" . $group["selectorIdx"] . ") > div > label")) -> click();
-
+        
+        // Scroll to the bottom of the page so the search button is within view
         $driver->executeScript('window.scrollTo(0, 1000)');
 
         // Select the search button to create a query for the current interest group
@@ -129,18 +131,15 @@ class NcaHarvestCommand extends Command
         );
         $driver->findElement(WebDriverBy::xpath("//*[@id=\"main_content_ctl07_ctlQuery_btnSearch\"]"))->click();
 
-
-
-
         // Wait for the member table to be present
         $driver->wait(30, 500)->until(
             WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("#main_content_Content > div.col-md-12.content-banner-main > div.grid-container > ul"))
         );
 
-        $currentPage = 0;
-        $nextPageFound = true;
+        $currentPage = 0; // Current page of results we're on
+        $nextPageFound = true; // Is there a next page to scrape results from?
 
-        try {
+        try { // Try to locate the button for the next page, if its never found -> nextPageFound = false
             $driver->wait(10, 500)->until (
                 WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::xpath("//*[@id=\"main_content_ctl07_ctlListControl_lnkPager" . ($currentPage + 1) ."\"]"))
             );
@@ -149,40 +148,30 @@ class NcaHarvestCommand extends Command
         }
 
 
-        $driver->executeScript('window.scrollTo(0, 0)');
-        while($nextPageFound) {
-            $driver->wait(20, 500)->until(
+        $driver->executeScript('window.scrollTo(0, 0)'); // Scroll back up to the top to restart the process
+        while($nextPageFound) { // Until there no more pages of results to scrape, keep repeating the scraping process
+            $driver->wait(20, 500)->until( // Wait until results load
                 WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("#main_content_Content > div.col-md-12.content-banner-main > div.grid-container > ul"))
             );
-
+            
+            // Scrape the results off the page
             $memberData[] = $this->scrapePage($driver);
 
-
-
-            try {
+            try { // Try to locate the button for the next page, if its never found -> nextPageFound = false
                 $driver->wait(10, 500)->until (
                     WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::xpath("//*[@id=\"main_content_ctl07_ctlListControl_lnkPager" . ($currentPage + 1) ."\"]"))
                 );
             } catch (\Exception $exception) {
                 $nextPageFound = false;
             }
+
+            // TODO Handle this error in logic, eventually there won't be another page to find and this will raise an Error
             $driver->findElement(WebDriverBy::xpath("//*[@id=\"main_content_ctl07_ctlListControl_lnkPager" . ($currentPage + 1) ."\"]")) -> click();
 
         }
-
-
-
-        /*foreach ($memberUrls as $memberUrl) {
-            $memberData[$memberUrl['id']] = $this->getMemberDataFromUrl($driver, $memberUrl['url']);
-            // Add that this member is in this group
-            $memberData[$memberUrl['id']]['groups'] = [ $groupId ];
-            sleep(rand(1,3));
-        }*/
-
+        
+        // Return to the original page and restart the process
         $driver->get("https://portal.natcom.org/member-directory");
-        $driver->findElement(WebDriverBy::cssSelector("#main_content_ctl07_ctlQuery_lst68d08db15f2145d588aec65f6a092330_pnlMultiSelect > ul > li:nth-child(" . $group["selectorIdx"] . ") > div > label")) -> click();
-
-
         return $memberData;
 
     }
@@ -198,44 +187,6 @@ class NcaHarvestCommand extends Command
         }
 
         return $memberUrls;
-    }
-
-    protected function getMemberDataFromUrl(RemoteWebDriver $driver, $url)
-    {
-        $driver->get($url);
-
-        $driver->wait(30, 500)->until(
-            WebDriverExpectedCondition::visibilityOfElementLocated(WebDriverBy::cssSelector("table[id$=PersonListing_tblMain]"))
-        );
-        $tableElement = $driver->findElement(WebDriverBy::cssSelector("table[id$=PersonListing_tblMain]"));
-
-        $name    = $this->getElementText($tableElement, "span[id$=lblPersonName]");
-        $company = $this->getElementText($tableElement, "span[id$=lblCompanyName]");
-        $title   = $this->getElementText($tableElement, "span[id$=lblPersonTitle]");
-        $address = $this->getElementText($tableElement, "span[id$=lblAddress]");
-        $email   = $this->getElementText($tableElement, "span[id$=lblEmail]");
-        $phone   = $this->getElementText($tableElement, "span[id$=lblPhone]");
-        $fax     = $this->getElementText($tableElement, "span[id$=lblFax]");
-
-        return [
-            'name'    => $name,
-            'company' => $company,
-            'title'   => $title,
-            'address' => $address,
-            'email'   => $email,
-            'phone'   => $phone,
-            'fax'     => $fax,
-        ];
-    }
-
-    protected function getElementText(RemoteWebElement $element, $cssSelector)
-    {
-        $result = $element->findElements(WebDriverBy::cssSelector($cssSelector));
-
-        if (count($result) === 0) {
-            return '';
-        }
-        return trim($result[0]->getText());
     }
 
     protected function login(RemoteWebDriver $driver, $username, $password)
