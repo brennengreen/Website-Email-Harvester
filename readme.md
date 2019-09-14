@@ -1,3 +1,5 @@
+## Disclaimer: The entirety of this is not my works, this is a tool maintained over several years and was most recently fairly heavily redesigned for me during my time at UK. I do not claim all of the work here, but in general it is still a good display of my coding abilities due to how much of it I have changed.
+
 # NCA/ICA Commands
 
 Prereqs:
